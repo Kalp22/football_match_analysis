@@ -21,3 +21,4 @@ training/football-players-detection-12/
 *.sr
 *.mp4
 *.avi
+best.pt
