@@ -177,57 +177,81 @@ class Tracker:
         return frame
 
     def draw_team_ball_control(self, frame, frame_num, team_ball_control):
-        # Resize frame if needed to avoid memory errors
+        # Resize frame if needed
         frame = self.resize_frame(frame)
-        
-        # Draw a semi-transparent rectangle directly on the frame without making a copy
-        cv2.rectangle(frame, (1350, 850), (1900, 970), (255, 255, 255), -1)
+        print(frame.shape)
+
+        # Get current frame dimensions
+        frame_height, frame_width = frame.shape[:2]
+
+        # Calculate relative positions based on frame dimensions
+        overlay_start_x = int(frame_width * 0.7)  # 70% of the frame width
+        overlay_start_y = int(frame_height * 0.85)  # 85% of the frame height
+        overlay_end_x = overlay_start_x + int(frame_width * 0.3)  # Covering 30% width
+        overlay_end_y = overlay_start_y + int(frame_height * 0.1)  # Covering 10% height
+
+        # Draw semi-transparent rectangle
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (overlay_start_x, overlay_start_y), (overlay_end_x, overlay_end_y), (255, 255, 255), -1)
         alpha = 0.4
-        cv2.addWeighted(frame, alpha, frame, 1 - alpha, 0, frame)  # Blend rectangle on original frame
+        cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
 
-        team_ball_control_till_frame = team_ball_control[:frame_num+1]
-        # Calculate the ball control percentage
-        team_1_num_frames = team_ball_control_till_frame[team_ball_control_till_frame == 1].shape[0]
-        team_2_num_frames = team_ball_control_till_frame[team_ball_control_till_frame == 2].shape[0]
+        # Calculate ball control percentages
+        team_ball_control_till_frame = team_ball_control[:frame_num + 1]
+        team_1_frames = (team_ball_control_till_frame == 1).sum()
+        team_2_frames = (team_ball_control_till_frame == 2).sum()
         
-        # Prevent division by zero
-        total_frames = team_1_num_frames + team_2_num_frames
-        if total_frames == 0:
-            team_1, team_2 = 0, 0
-        else:
-            team_1 = team_1_num_frames / total_frames
-            team_2 = team_2_num_frames / total_frames
+        # Safely calculate percentages to avoid division by zero
+        total_frames = team_1_frames + team_2_frames
+        team_1_percentage = (team_1_frames / total_frames) * 100 if total_frames > 0 else 0
+        team_2_percentage = (team_2_frames / total_frames) * 100 if total_frames > 0 else 0
 
-        cv2.putText(frame, f"Team 1 Ball Control: {team_1 * 100:.2f}%", (1400, 900), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
-        cv2.putText(frame, f"Team 2 Ball Control: {team_2 * 100:.2f}%", (1400, 950), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 3)
+        # Place ball control text in the overlay
+        text_y = overlay_start_y + int(frame_height * 0.03)  # 3% of frame height as padding
+        cv2.putText(frame, f"Team 1 Ball Control: {team_1_percentage:.2f}%", (overlay_start_x + 10, text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        cv2.putText(frame, f"Team 2 Ball Control: {team_2_percentage:.2f}%", (overlay_start_x + 10, text_y + 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
 
         return frame
 
-    def draw_annotations(self,video_frames, tracks,team_ball_control):
-        output_video_frames= []
+    def draw_annotations(self, video_frames, tracks, team_ball_control):
+        output_video_frames = []
+        
         for frame_num, frame in enumerate(video_frames):
             frame = frame.copy()
 
-            player_dict = tracks["players"][frame_num]
-            ball_dict = tracks["ball"][frame_num]
-            referee_dict = tracks["referees"][frame_num]
+            # Check if the frame_num exists in each track type to avoid IndexError
+            if frame_num < len(tracks["players"]):
+                player_dict = tracks["players"][frame_num]
+            else:
+                player_dict = {}
+
+            if frame_num < len(tracks["ball"]):
+                ball_dict = tracks["ball"][frame_num]
+            else:
+                ball_dict = {}
+
+            if frame_num < len(tracks["referees"]):
+                referee_dict = tracks["referees"][frame_num]
+            else:
+                referee_dict = {}
 
             # Draw Players
             for track_id, player in player_dict.items():
-                color = player.get("team_color",(0,0,255))
-                frame = self.draw_ellipse(frame, player["bbox"],color, track_id)
+                color = player.get("team_color", (0, 0, 255))
+                frame = self.draw_ellipse(frame, player["bbox"], color, track_id)
 
-                if player.get('has_ball',False):
-                    frame = self.draw_traingle(frame, player["bbox"],(0,0,255))
+                if player.get('has_ball', False):
+                    frame = self.draw_traingle(frame, player["bbox"], (0, 0, 255))
 
-            # Draw Referee
+            # Draw Referees
             for _, referee in referee_dict.items():
-                frame = self.draw_ellipse(frame, referee["bbox"],(0,255,255))
-            
-            # Draw ball 
-            for track_id, ball in ball_dict.items():
-                frame = self.draw_traingle(frame, ball["bbox"],(0,255,0))
+                frame = self.draw_ellipse(frame, referee["bbox"], (0, 255, 255))
 
+            # Draw Ball
+            for track_id, ball in ball_dict.items():
+                frame = self.draw_traingle(frame, ball["bbox"], (0, 255, 0))
 
             # Draw Team Ball Control
             frame = self.draw_team_ball_control(frame, frame_num, team_ball_control)

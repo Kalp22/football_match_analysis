@@ -57,6 +57,11 @@ class SpeedAndDistance_Estimator():
             for object, object_tracks in tracks.items():
                 if object == "ball" or object == "referees":
                     continue 
+                
+                # Ensure frame_num is within bounds for object_tracks
+                if frame_num >= len(object_tracks):
+                    continue
+                
                 for _, track_info in object_tracks[frame_num].items():
                    if "speed" in track_info:
                        speed = track_info.get('speed',None)
