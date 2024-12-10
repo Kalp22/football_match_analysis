@@ -22,3 +22,7 @@ training/football-players-detection-12/
 *.mp4
 *.avi
 best.pt
+dist/
+results/
+runs/
+build/

@@ -28,7 +28,11 @@ class CameraMovementEstimator():
             blockSize = 7,
             mask = mask_features
         )
-
+        
+    # Get the camera movement per frame
+    # This function uses the Lucas-Kanade optical flow method to estimate the camera movement per frame
+    # The camera movement is estimated by calculating the optical flow between the current frame and the previous frame
+    # The optical flow is calculated using the calcOpticalFlowPyrLK function from OpenCV
     def add_adjust_positions_to_tracks(self,tracks, camera_movement_per_frame):
         for object, object_tracks in tracks.items():
             for frame_num, track in enumerate(object_tracks):
@@ -40,6 +44,9 @@ class CameraMovementEstimator():
                     
 
 
+    # Get the camera movement per frame
+    # This function uses the Lucas-Kanade optical flow method to estimate the camera movement per frame
+    # The camera movement is estimated by calculating the optical flow between the current frame and the previous frame
     def get_camera_movement(self,frames,read_from_stub=False, stub_path=None):
         # Read the stub 
         if read_from_stub and stub_path is not None and os.path.exists(stub_path):

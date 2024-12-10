@@ -1,3 +1,4 @@
+import os
 from utils import read_video, save_video
 from trackers import Tracker
 import cv2
@@ -8,17 +9,27 @@ from camera_movement_estimator import CameraMovementEstimator
 from view_transformer import ViewTransformer
 from speed_and_distance_estimator import SpeedAndDistance_Estimator
 
+# Get absolute paths relative to the script's location
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Define absolute paths
+INPUT_VIDEOS_DIR = os.path.join(BASE_DIR, 'input_videos')
+OUTPUT_VIDEOS_DIR = os.path.join(BASE_DIR, 'output_videos')
+MODELS_DIR = os.path.join(BASE_DIR, 'models')
+STUBS_DIR = os.path.join(BASE_DIR, 'stubs')
 
 def main():
     # Read Video
-    video_frames = read_video('input_videos/FootballClasico.mp4')
+    video_frames = read_video(os.path.join(INPUT_VIDEOS_DIR,'08fd33_4.mp4'))
     print("1")
     # Initialize Tracker
-    tracker = Tracker('models/best.pt')
+    model_path = os.path.join(MODELS_DIR, 'best.pt')
+    tracker = Tracker(model_path)
     print("2")
 
     tracks = tracker.get_object_tracks(video_frames,
-                                       read_from_stub=False,stub_path="stubs/track_stubs.pkl")
+                                       read_from_stub=False,stub_path=os.path.join(STUBS_DIR, "track_stubs.pkl")
+                                       )
     print("3")
     # Get object positions 
     tracker.add_position_to_tracks(tracks)
@@ -28,7 +39,8 @@ def main():
     camera_movement_estimator = CameraMovementEstimator(video_frames[0])
     print("5")
     camera_movement_per_frame = camera_movement_estimator.get_camera_movement(video_frames,
-                                                                                read_from_stub=False,stub_path="stubs/camera_movement_stubs.pkl")
+                                                                                read_from_stub=False,stub_path=os.path.join(STUBS_DIR, "camera_movement_stubs.pkl")
+                                                                            )
     print("6")
     camera_movement_estimator.add_adjust_positions_to_tracks(tracks,camera_movement_per_frame)
 
@@ -66,7 +78,7 @@ def main():
     
     print("13")
     # Assign Ball Aquisition
-    player_assigner =PlayerBallAssigner()
+    player_assigner = PlayerBallAssigner()
     team_ball_control= []
     for frame_num, player_track in enumerate(tracks['players']):
         ball_bbox = tracks['ball'][frame_num][1]['bbox']
@@ -95,7 +107,8 @@ def main():
     print("17")
 
     # Save video
-    save_video(output_video_frames, 'output_videos/output_video.avi')
+    output_video_path = os.path.join(OUTPUT_VIDEOS_DIR, 'output_video.avi')
+    save_video(output_video_frames, output_video_path)
     print("18")
 
 if __name__ == '__main__':
